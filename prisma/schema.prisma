@@ -1,0 +1,433 @@
+// Zotpool Database Schema
+// UCI Student Carpooling Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// User model with UCI verification
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique // Must be @uci.edu
+  name      String?
+  emailVerified DateTime? // NextAuth requires DateTime?
+  image     String? // NextAuth optional field
+  profilePhoto String?
+  bio       String?
+
+  // UCI-specific fields
+  studentId String?  @unique // UCI student ID
+  userType  UserType @default(STUDENT)
+  year      String?  // Academic year for students
+  major     String?  // Major for students
+  department String? // Department for staff
+
+  // Verification status
+  uciVerified      Boolean @default(false)
+  driverVerified   Boolean @default(false)
+
+  // Contact preferences
+  phone        String?
+  discordTag   String?
+  instagram    String?
+  linkedin     String?
+
+  // Safety & Preferences
+  genderPreference GenderPreference?
+  smokingPolicy    SmokingPolicy    @default(NO_SMOKING)
+  covidPreference  CovidPreference  @default(FLEXIBLE)
+
+  // Rating system
+  driverRating     Float? // Average rating as driver
+  passengerRating  Float? // Average rating as passenger
+  totalRides       Int    @default(0)
+
+  // Relationships
+  accounts      Account[]
+  sessions      Session[]
+  vehicles      Vehicle[]
+  schedules     Schedule[]
+  ridesAsDriver Ride[]    @relation("Driver")
+  ridesAsPassenger RidePassenger[]
+  sentMessages  Message[] @relation("Sender")
+  receivedMessages Message[] @relation("Receiver")
+  givenReviews  Review[]  @relation("Reviewer")
+  receivedReviews Review[] @relation("Reviewed")
+  reports       Report[]  @relation("Reporter")
+  reportedBy    Report[]  @relation("Reported")
+  achievements  UserAchievement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// Vehicle information for drivers
+model Vehicle {
+  id           String @id @default(cuid())
+  userId       String
+  make         String
+  model        String
+  year         Int
+  color        String
+  licensePlate String @unique
+  capacity     Int    @default(4) // Total seats including driver
+
+  // Insurance & Verification
+  insuranceVerified Boolean @default(false)
+  licenseVerified   Boolean @default(false)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rides Ride[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("vehicles")
+}
+
+// Recurring and one-time schedules
+model Schedule {
+  id        String       @id @default(cuid())
+  userId    String
+  type      ScheduleType
+
+  // Location details
+  startLocation  String
+  startLatitude  Float
+  startLongitude Float
+  endLocation    String
+  endLatitude    Float
+  endLongitude   Float
+
+  // Time details
+  departureTime DateTime
+  arrivalTime   DateTime?
+
+  // Recurring schedule details
+  daysOfWeek    String // JSON string: "[0,1,2,3,4]" for Mon-Fri
+  startDate     DateTime
+  endDate       DateTime?
+
+  // Flexibility and preferences
+  flexibilityMinutes Int @default(15) // ±15 minutes
+  maxDetourMiles     Float @default(5.0)
+
+  // Route preferences
+  highwayPreferred   Boolean @default(true)
+  tollRoadsOk        Boolean @default(true)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rides Ride[]
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("schedules")
+}
+
+// Individual ride instances
+model Ride {
+  id         String     @id @default(cuid())
+  driverId   String
+  vehicleId  String
+  scheduleId String?
+
+  // Trip details
+  startLocation  String
+  startLatitude  Float
+  startLongitude Float
+  endLocation    String
+  endLatitude    Float
+  endLongitude   Float
+
+  // Timing
+  departureTime  DateTime
+  arrivalTime    DateTime?
+  actualDeparture DateTime?
+  actualArrival   DateTime?
+
+  // Capacity and status
+  availableSeats Int
+  totalSeats     Int
+  status         RideStatus @default(PENDING)
+
+  // Cost sharing
+  suggestedFare  Float?
+  actualFare     Float?
+
+  // Route and preferences
+  routeData      Json? // Stored route from maps API
+  notes          String?
+
+  // Special ride types
+  isEventRide    Boolean @default(false)
+  eventName      String?
+
+  driver     User            @relation("Driver", fields: [driverId], references: [id])
+  vehicle    Vehicle         @relation(fields: [vehicleId], references: [id])
+  schedule   Schedule?       @relation(fields: [scheduleId], references: [id])
+  passengers RidePassenger[]
+  messages   Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("rides")
+}
+
+// Junction table for ride passengers
+model RidePassenger {
+  id       String            @id @default(cuid())
+  rideId   String
+  userId   String
+  status   PassengerStatus   @default(PENDING)
+
+  // Pickup details
+  pickupLocation  String?
+  pickupLatitude  Float?
+  pickupLongitude Float?
+  dropoffLocation String?
+  dropoffLatitude Float?
+  dropoffLongitude Float?
+
+  // Payment
+  agreedFare     Float?
+  paidAmount     Float?
+  paymentMethod  String?
+
+  ride Ride @relation(fields: [rideId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  joinedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([rideId, userId])
+  @@map("ride_passengers")
+}
+
+// In-app messaging system
+model Message {
+  id         String      @id @default(cuid())
+  senderId   String
+  receiverId String
+  rideId     String?
+  content    String
+  type       MessageType @default(TEXT)
+
+  // Message status
+  isRead     Boolean @default(false)
+  readAt     DateTime?
+
+  sender   User @relation("Sender", fields: [senderId], references: [id])
+  receiver User @relation("Receiver", fields: [receiverId], references: [id])
+  ride     Ride? @relation(fields: [rideId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("messages")
+}
+
+// Review and rating system
+model Review {
+  id         String     @id @default(cuid())
+  reviewerId String
+  reviewedId String
+  rideId     String
+  rating     Int        // 1-5 stars
+  comment    String?
+  type       ReviewType // DRIVER or PASSENGER
+
+  // Review categories
+  punctuality Int? // 1-5
+  communication Int? // 1-5
+  cleanliness Int? // 1-5 (for driver's car)
+  safety      Int? // 1-5
+
+  reviewer User @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewed User @relation("Reviewed", fields: [reviewedId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([reviewerId, reviewedId, rideId])
+  @@map("reviews")
+}
+
+// Report system for safety
+model Report {
+  id         String     @id @default(cuid())
+  reporterId String
+  reportedId String
+  rideId     String?
+  reason     ReportReason
+  description String
+  status     ReportStatus @default(PENDING)
+
+  // Admin response
+  adminResponse String?
+  resolvedAt    DateTime?
+
+  reporter User @relation("Reporter", fields: [reporterId], references: [id])
+  reported User @relation("Reported", fields: [reportedId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reports")
+}
+
+// Gamification: Achievements
+model Achievement {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  iconUrl     String?
+  category    AchievementCategory
+  requirement Int // e.g., 10 rides for "Frequent Rider"
+  points      Int @default(0)
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+// User achievements junction
+model UserAchievement {
+  id            String @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+// Enums
+enum UserType {
+  STUDENT
+  STAFF
+  FACULTY
+  GRADUATE
+}
+
+enum GenderPreference {
+  NO_PREFERENCE
+  SAME_GENDER_ONLY
+}
+
+enum SmokingPolicy {
+  NO_SMOKING
+  SMOKING_OK
+  VAPING_OK
+}
+
+enum CovidPreference {
+  MASKS_REQUIRED
+  MASKS_PREFERRED
+  FLEXIBLE
+}
+
+enum ScheduleType {
+  RECURRING
+  ONE_TIME
+}
+
+enum RideStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PassengerStatus {
+  PENDING
+  CONFIRMED
+  PICKED_UP
+  DROPPED_OFF
+  CANCELLED
+}
+
+enum MessageType {
+  TEXT
+  LOCATION
+  SYSTEM
+}
+
+enum ReviewType {
+  DRIVER
+  PASSENGER
+}
+
+enum ReportReason {
+  INAPPROPRIATE_BEHAVIOR
+  NO_SHOW
+  UNSAFE_DRIVING
+  HARASSMENT
+  SPAM
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  INVESTIGATING
+  RESOLVED
+  DISMISSED
+}
+
+enum AchievementCategory {
+  RIDES
+  SAFETY
+  COMMUNITY
+  ECO_IMPACT
+}
