@@ -29,12 +29,17 @@ interface Ride {
     capacity: number
   }
   compatibilityScore: number
+  compatibilityReasoning?: string
+  compatibilityHighlights?: string[]
 }
 
 export default function FindRide() {
   const { data: session, status } = useSession()
   const [rides, setRides] = useState<Ride[]>([])
   const [loading, setLoading] = useState(false)
+  const [requesting, setRequesting] = useState<string | null>(null)
+  const [requestMessage, setRequestMessage] = useState('')
+  const [showMessageModal, setShowMessageModal] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useState({
     from: '',
     to: '',
@@ -51,6 +56,7 @@ export default function FindRide() {
       if (searchParams.from) params.append('from', searchParams.from)
       if (searchParams.to) params.append('to', searchParams.to)
       if (searchParams.date) params.append('date', searchParams.date)
+      if (searchParams.time) params.append('time', searchParams.time)
 
       const response = await fetch(`/api/rides?${params}`)
       const data = await response.json()
@@ -64,6 +70,36 @@ export default function FindRide() {
       console.error('Error fetching rides:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRequestRide = async (rideId: string) => {
+    setRequesting(rideId)
+    try {
+      const response = await fetch(`/api/rides/${rideId}/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: requestMessage
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        alert('✅ Ride request sent successfully! The driver will be notified.')
+        setShowMessageModal(null)
+        setRequestMessage('')
+      } else {
+        alert(`❌ ${data.error || 'Failed to request ride'}`)
+      }
+    } catch (error) {
+      console.error('Error requesting ride:', error)
+      alert('❌ Failed to send ride request. Please try again.')
+    } finally {
+      setRequesting(null)
     }
   }
 
@@ -187,18 +223,43 @@ export default function FindRide() {
             {rides.length > 0 ? (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-uci-navy">Available Rides ({rides.length})</h2>
-                {rides.map((ride) => (
-                  <div key={ride.id} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                {rides.map((ride, index) => (
+                  <div
+                    key={ride.id}
+                    className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 fade-in-up"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
-                        <div className="flex items-center mb-2">
+                        <div className="flex items-center mb-2 flex-wrap gap-2">
                           <div className="text-lg font-semibold text-gray-900">
                             {ride.startLocation} → {ride.endLocation}
                           </div>
-                          <div className="ml-4 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+                          <div className={`px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1 ${
+                            ride.compatibilityScore >= 0.9 ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' :
+                            ride.compatibilityScore >= 0.75 ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
+                            ride.compatibilityScore >= 0.6 ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' :
+                            'bg-gray-200 text-gray-700'
+                          }`}>
+                            <span className="text-xs">✨</span>
                             {Math.round(ride.compatibilityScore * 100)}% match
                           </div>
                         </div>
+
+                        {/* AI Compatibility Insights */}
+                        {ride.compatibilityHighlights && ride.compatibilityHighlights.length > 0 && (
+                          <div className="mb-3 flex flex-wrap gap-2">
+                            {ride.compatibilityHighlights.map((highlight, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full border border-blue-200"
+                              >
+                                <span className="text-blue-500">●</span>
+                                {highlight}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <div className="text-gray-600 mb-2">
                           {new Date(ride.departureTime).toLocaleDateString('en-US', {
                             weekday: 'short',
@@ -244,19 +305,44 @@ export default function FindRide() {
                       </div>
 
                       <div className="flex space-x-3">
-                        <button className="px-4 py-2 border border-uci-blue text-uci-blue rounded-lg hover:bg-uci-blue hover:text-white transition-colors">
+                        <button
+                          onClick={() => alert('💬 Messaging feature coming soon!')}
+                          className="px-4 py-2 border border-uci-blue text-uci-blue rounded-lg hover:bg-uci-blue hover:text-white transition-colors"
+                        >
                           💬 Message
                         </button>
-                        <button className="btn-primary px-6 py-2">
-                          🎯 Request Ride
+                        <button
+                          onClick={() => setShowMessageModal(ride.id)}
+                          disabled={requesting === ride.id}
+                          className="btn-primary px-6 py-2 disabled:opacity-50 glow-button"
+                        >
+                          {requesting === ride.id ? (
+                            <span className="flex items-center gap-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-uci-navy"></div>
+                              Requesting...
+                            </span>
+                          ) : (
+                            '🎯 Request Ride'
+                          )}
                         </button>
                       </div>
                     </div>
 
+                    {/* AI Reasoning */}
+                    {ride.compatibilityReasoning && (
+                      <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
+                        <p className="text-sm text-gray-700 flex items-start gap-2">
+                          <span className="text-lg">🤖</span>
+                          <span><strong className="text-uci-blue">AI Analysis:</strong> {ride.compatibilityReasoning}</span>
+                        </p>
+                      </div>
+                    )}
+
                     {ride.notes && (
-                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-600">
-                          <strong>Driver notes:</strong> {ride.notes}
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-sm text-gray-600 flex items-start gap-2">
+                          <span>💬</span>
+                          <span><strong>Driver notes:</strong> {ride.notes}</span>
                         </p>
                       </div>
                     )}
@@ -295,6 +381,50 @@ export default function FindRide() {
           </div>
         </div>
       </div>
+
+      {/* Request Ride Modal */}
+      {showMessageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fadeIn card-reveal">
+            <h3 className="text-2xl font-bold text-uci-navy mb-4">Request this Ride</h3>
+            <p className="text-gray-600 mb-4">
+              Send a message to the driver with your ride request. They'll be notified and can accept or decline.
+            </p>
+            <textarea
+              value={requestMessage}
+              onChange={(e) => setRequestMessage(e.target.value)}
+              placeholder="Hi! I'd love to join your ride. I'll be ready at the pickup location on time."
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-uci-blue focus:border-transparent resize-none"
+              rows={4}
+            />
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowMessageModal(null)
+                  setRequestMessage('')
+                }}
+                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleRequestRide(showMessageModal)}
+                disabled={requesting === showMessageModal}
+                className="flex-1 btn-primary py-3 disabled:opacity-50 glow-button success-pulse"
+              >
+                {requesting === showMessageModal ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-uci-navy"></div>
+                    Sending...
+                  </span>
+                ) : (
+                  '🚀 Send Request'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { prisma } from '@/lib/prisma'
 import { RideStatus } from '@prisma/client'
+import { calculateBatchCompatibility } from '@/lib/gemini'
 
 export async function GET(request: NextRequest) {
   try {
@@ -86,12 +87,53 @@ export async function GET(request: NextRequest) {
       take: limit
     })
 
-    // Calculate available seats and add compatibility score placeholder
+    // Get current user's profile for compatibility matching
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: {
+        name: true,
+        preferredGender: true,
+        smokingPreference: true,
+        covidVaccinated: true,
+        musicPreference: true,
+        chattiness: true
+      }
+    })
+
+    // Calculate compatibility scores using Gemini AI
+    const compatibilityScores = await calculateBatchCompatibility(
+      {
+        name: currentUser?.name || 'Anonymous',
+        preferences: {
+          preferredGender: currentUser?.preferredGender || undefined,
+          smokingPreference: currentUser?.smokingPreference || undefined,
+          covidVaccinated: currentUser?.covidVaccinated || undefined,
+          musicPreference: currentUser?.musicPreference || undefined,
+          chattiness: currentUser?.chattiness || undefined
+        }
+      },
+      rides,
+      {
+        from: from || undefined,
+        to: to || undefined,
+        time: searchParams.get('time') || undefined
+      }
+    )
+
+    // Map compatibility scores to rides
+    const scoreMap = new Map(compatibilityScores.map(s => [s.rideId, s]))
+
+    // Calculate available seats and add AI-powered compatibility scores
     const ridesWithDetails = rides.map(ride => ({
       ...ride,
       availableSeats: ride.totalSeats - ride.passengers.filter(p => p.status === 'CONFIRMED').length,
-      compatibilityScore: Math.random() * 0.3 + 0.7 // Placeholder: 70-100% compatibility
+      compatibilityScore: scoreMap.get(ride.id)?.score || 0.5,
+      compatibilityReasoning: scoreMap.get(ride.id)?.reasoning,
+      compatibilityHighlights: scoreMap.get(ride.id)?.highlights
     }))
+
+    // Sort by compatibility score (highest first)
+    ridesWithDetails.sort((a, b) => b.compatibilityScore - a.compatibilityScore)
 
     return NextResponse.json(ridesWithDetails)
   } catch (error) {

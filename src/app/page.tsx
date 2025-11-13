@@ -16,12 +16,13 @@ export default function Home() {
       <Navigation />
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden particle-bg">
+        {/* Enhanced Background Pattern */}
+        <div className="absolute inset-0 opacity-20">
           <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 25% 25%, rgba(0, 100, 164, 0.3) 0%, transparent 50%),
-                             radial-gradient(circle at 75% 75%, rgba(255, 210, 0, 0.3) 0%, transparent 50%)`
+            backgroundImage: `radial-gradient(circle at 25% 25%, rgba(0, 100, 164, 0.4) 0%, transparent 50%),
+                             radial-gradient(circle at 75% 75%, rgba(255, 210, 0, 0.4) 0%, transparent 50%),
+                             radial-gradient(circle at 50% 50%, rgba(107, 164, 217, 0.3) 0%, transparent 70%)`
           }}></div>
         </div>
 
@@ -42,11 +43,11 @@ export default function Home() {
             }`}>
               <h1 className="text-5xl lg:text-7xl xl:text-8xl font-black mb-6 leading-tight">
                 Welcome to{' '}
-                <span className="bg-gradient-to-r from-uci-blue to-uci-light-blue bg-clip-text text-transparent">
+                <span className="gradient-text">
                   Zotpool
                 </span>
               </h1>
-              <div className="w-24 h-2 uci-gradient-gold rounded-full mx-auto mb-8"></div>
+              <div className="w-24 h-2 uci-gradient-gold rounded-full mx-auto mb-8 badge-shimmer"></div>
             </div>
 
             {/* Subtitle */}
@@ -70,7 +71,7 @@ export default function Home() {
             }`}>
               <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
                 <Link href="/find-ride">
-                  <button className="btn-primary text-lg px-12 py-4 ripple shadow-xl">
+                  <button className="btn-primary text-lg px-12 py-4 ripple shadow-xl glow-button hover-lift">
                     <span className="flex items-center space-x-2">
                       <span>🔍</span>
                       <span>Find a Ride</span>
@@ -78,7 +79,7 @@ export default function Home() {
                   </button>
                 </Link>
                 <Link href="/offer-ride">
-                  <button className="btn-secondary text-lg px-12 py-4 ripple shadow-xl bg-white border-uci-blue text-uci-blue">
+                  <button className="btn-secondary text-lg px-12 py-4 ripple shadow-xl bg-white border-uci-blue text-uci-blue glow-button hover-lift">
                     <span className="flex items-center space-x-2">
                       <span>🚗</span>
                       <span>Offer a Ride</span>
@@ -93,17 +94,17 @@ export default function Home() {
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                <div className="glass rounded-2xl p-6 text-center">
-                  <div className="text-3xl lg:text-4xl font-bold text-uci-blue mb-2">10K+</div>
-                  <div className="text-gray-600">UCI Community Members</div>
+                <div className="glass-premium rounded-2xl p-6 text-center hover-lift">
+                  <div className="text-3xl lg:text-4xl font-bold text-uci-blue mb-2 gradient-text">10K+</div>
+                  <div className="text-gray-700 font-medium">UCI Community Members</div>
                 </div>
-                <div className="glass rounded-2xl p-6 text-center">
-                  <div className="text-3xl lg:text-4xl font-bold text-uci-blue mb-2">5K+</div>
-                  <div className="text-gray-600">Successful Rides</div>
+                <div className="glass-premium rounded-2xl p-6 text-center hover-lift">
+                  <div className="text-3xl lg:text-4xl font-bold text-uci-blue mb-2 gradient-text">5K+</div>
+                  <div className="text-gray-700 font-medium">Successful Rides</div>
                 </div>
-                <div className="glass rounded-2xl p-6 text-center">
-                  <div className="text-3xl lg:text-4xl font-bold text-uci-blue mb-2">2.5M+</div>
-                  <div className="text-gray-600">Miles of CO₂ Saved</div>
+                <div className="glass-premium rounded-2xl p-6 text-center hover-lift">
+                  <div className="text-3xl lg:text-4xl font-bold text-uci-blue mb-2 gradient-text">2.5M+</div>
+                  <div className="text-gray-700 font-medium">Miles of CO₂ Saved</div>
                 </div>
               </div>
             </div>
@@ -158,8 +159,8 @@ export default function Home() {
                 delay: 'delay-400'
               }
             ].map((feature, index) => (
-              <div key={index} className={`feature-card bg-white rounded-2xl p-8 shadow-lg border border-gray-100 fade-in-up ${feature.delay}`}>
-                <div className="w-16 h-16 uci-gradient rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <div key={index} className={`feature-card bg-white rounded-2xl p-8 shadow-lg border border-gray-100 fade-in-up hover-lift card-reveal ${feature.delay}`}>
+                <div className="w-16 h-16 uci-gradient rounded-2xl flex items-center justify-center mx-auto mb-6 float-slow">
                   <span className="text-2xl">{feature.icon}</span>
                 </div>
                 <h3 className="text-xl font-bold mb-4 text-uci-navy">{feature.title}</h3>

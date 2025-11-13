@@ -1,16 +1,18 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navigation from '@/components/Navigation'
 import { redirect } from 'next/navigation'
 
 export default function Profile() {
   const { data: session, status } = useSession()
   const [isEditing, setIsEditing] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [profileData, setProfileData] = useState({
-    name: session?.user?.name || '',
-    email: session?.user?.email || '',
+    name: '',
+    email: '',
     bio: '',
     year: '',
     major: '',
@@ -19,10 +21,77 @@ export default function Profile() {
     discordTag: '',
     instagram: '',
     linkedin: '',
-    genderPreference: 'NO_PREFERENCE',
-    smokingPolicy: 'NO_SMOKING',
-    covidPreference: 'FLEXIBLE'
+    preferredGender: 'NO_PREFERENCE',
+    smokingPreference: 'NO_SMOKING',
+    covidPreference: 'FLEXIBLE',
+    musicPreference: '',
+    chattiness: ''
   })
+
+  // Load profile data
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetchProfile()
+    }
+  }, [session])
+
+  const fetchProfile = async () => {
+    try {
+      const response = await fetch('/api/profile')
+      if (response.ok) {
+        const data = await response.json()
+        setProfileData({
+          name: data.name || '',
+          email: data.email || '',
+          bio: data.bio || '',
+          year: data.year || '',
+          major: data.major || '',
+          userType: data.userType || 'STUDENT',
+          phone: data.phone || '',
+          discordTag: data.discordTag || '',
+          instagram: data.instagram || '',
+          linkedin: data.linkedin || '',
+          preferredGender: data.preferredGender || 'NO_PREFERENCE',
+          smokingPreference: data.smokingPreference || 'NO_SMOKING',
+          covidPreference: data.covidPreference || 'FLEXIBLE',
+          musicPreference: data.musicPreference || '',
+          chattiness: data.chattiness || ''
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(profileData)
+      })
+
+      if (response.ok) {
+        alert('✅ Profile saved successfully!')
+        setIsEditing(false)
+      } else {
+        const data = await response.json()
+        alert(`❌ ${data.error || 'Failed to save profile'}`)
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      alert('❌ Failed to save profile. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   if (status === 'loading') {
     return (
@@ -85,7 +154,7 @@ export default function Profile() {
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <h2 className="text-2xl font-bold text-uci-navy mb-8">Profile Information</h2>
 
-              <form className="space-y-6">
+              <form onSubmit={handleSaveProfile} className="space-y-6">
                 {/* Basic Information */}
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
@@ -253,8 +322,8 @@ export default function Profile() {
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Gender Preference</label>
                       <select
-                        value={profileData.genderPreference}
-                        onChange={(e) => setProfileData({...profileData, genderPreference: e.target.value})}
+                        value={profileData.preferredGender}
+                        onChange={(e) => setProfileData({...profileData, preferredGender: e.target.value})}
                         disabled={!isEditing}
                         className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-uci-blue focus:border-transparent ${
                           !isEditing ? 'bg-gray-50' : ''
@@ -268,8 +337,8 @@ export default function Profile() {
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Smoking Policy</label>
                       <select
-                        value={profileData.smokingPolicy}
-                        onChange={(e) => setProfileData({...profileData, smokingPolicy: e.target.value})}
+                        value={profileData.smokingPreference}
+                        onChange={(e) => setProfileData({...profileData, smokingPreference: e.target.value})}
                         disabled={!isEditing}
                         className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-uci-blue focus:border-transparent ${
                           !isEditing ? 'bg-gray-50' : ''
@@ -312,9 +381,17 @@ export default function Profile() {
                       </button>
                       <button
                         type="submit"
-                        className="btn-primary px-8 py-3"
+                        disabled={saving}
+                        className="btn-primary px-8 py-3 disabled:opacity-50 glow-button success-pulse"
                       >
-                        💾 Save Changes
+                        {saving ? (
+                          <span className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-uci-navy"></div>
+                            Saving...
+                          </span>
+                        ) : (
+                          '💾 Save Changes'
+                        )}
                       </button>
                     </div>
                   </div>
@@ -322,17 +399,18 @@ export default function Profile() {
               </form>
             </div>
 
-            {/* Coming Soon Notice */}
-            <div className="mt-8 text-center bg-blue-50 rounded-2xl p-8">
-              <div className="w-16 h-16 uci-gradient rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">⚡</span>
+            {/* Success Message */}
+            {!isEditing && !loading && (
+              <div className="mt-8 text-center bg-green-50 rounded-2xl p-8 hover-lift">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">✅</span>
+                </div>
+                <h3 className="text-xl font-bold text-green-900 mb-2">Profile is Active!</h3>
+                <p className="text-green-700">
+                  Your profile information is being used for AI-powered ride matching. Update anytime to improve your matches!
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-uci-navy mb-2">Profile System Coming Soon!</h3>
-              <p className="text-gray-600">
-                We're building a comprehensive profile system with photo uploads, verification badges,
-                and advanced preferences. Your changes will be saved once the backend is connected!
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </div>
