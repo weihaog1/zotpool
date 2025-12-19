@@ -1,12 +1,18 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Link, useLocation } from 'react-router-dom';
-import { Car, LogOut, User, PlusCircle, Search, Home, Menu, X, Zap } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Car, LogOut, User, PlusCircle, Search, Home, Menu, X, Zap, FlaskConical } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout } = useAppContext();
+  const { user, logout, login } = useAppContext();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  const handleTestOnboarding = async () => {
+    await login('test@uci.edu');
+    navigate('/onboarding');
+  };
 
   const NavLink = ({ to, icon: Icon, label, primary = false }: any) => {
     const isActive = location.pathname === to;
@@ -28,15 +34,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     );
   };
 
+  const isLandingPage = location.pathname === '/';
+
   return (
     <div className="min-h-screen flex flex-col relative bg-slate-50/50">
       {/* Floating Navbar */}
       <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 px-4 pointer-events-none">
-        <nav className="glass rounded-full shadow-xl shadow-slate-200/50 pointer-events-auto w-full max-w-5xl mx-auto transition-all duration-300">
+        <nav className={`${isLandingPage ? 'glass-solid' : 'glass'} rounded-full shadow-xl shadow-slate-200/50 pointer-events-auto w-full max-w-5xl mx-auto transition-all duration-300`}>
             <div className="px-6">
             <div className="flex justify-between items-center h-16">
                 <div className="flex items-center">
-                <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 group">
+                <Link to={user ? (user.isOnboarded ? "/dashboard" : "/onboarding") : "/"} className="flex items-center gap-2 group">
                     <div className="bg-gradient-to-br from-uci-blue to-blue-600 p-2 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-md">
                         <Car className="text-white h-5 w-5" />
                     </div>
@@ -77,8 +85,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 {/* Public Navigation */}
                 {!user && (
                 <div className="hidden md:flex items-center space-x-2">
+                    <button
+                      onClick={handleTestOnboarding}
+                      className="flex items-center gap-1.5 px-4 py-2 text-orange-600 font-medium hover:bg-orange-50 rounded-full transition-colors text-sm border border-orange-200 border-dashed"
+                    >
+                      <FlaskConical size={16} /> Test Onboard
+                    </button>
                     <Link to="/login" className="px-5 py-2.5 text-uci-blue font-semibold hover:bg-blue-50 rounded-full transition-colors">Log In</Link>
-                    <Link to="/login" className="bg-uci-blue text-white px-6 py-2.5 rounded-full font-bold hover:bg-blue-700 transition-all hover:shadow-lg hover:shadow-blue-900/20 transform hover:-translate-y-0.5">
+                    <Link to="/signup" className="bg-uci-blue text-white px-6 py-2.5 rounded-full font-bold hover:bg-blue-700 transition-all hover:shadow-lg hover:shadow-blue-900/20 transform hover:-translate-y-0.5">
                     Sign Up
                     </Link>
                 </div>
@@ -127,8 +141,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </>
                 ) : (
                     <div className="flex flex-col gap-3 p-2">
+                        <button
+                          onClick={() => {
+                            handleTestOnboarding();
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-3 text-orange-600 font-medium hover:bg-orange-50 rounded-xl transition-colors border border-orange-200 border-dashed"
+                        >
+                          <FlaskConical size={18} /> Test Onboard
+                        </button>
                         <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center py-3 text-uci-blue font-bold hover:bg-blue-50 rounded-xl transition-colors">Log In</Link>
-                        <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center py-3 bg-uci-blue text-white font-bold rounded-xl shadow-lg shadow-blue-500/25">Sign Up</Link>
+                        <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center py-3 bg-uci-blue text-white font-bold rounded-xl shadow-lg shadow-blue-500/25">Sign Up</Link>
                     </div>
                 )}
             </div>
@@ -136,7 +159,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </nav>
       </div>
 
-      <main className="flex-grow pt-24 pb-12 relative z-0">
+      <main className="flex-grow pb-12 relative z-0">
         {children}
       </main>
 

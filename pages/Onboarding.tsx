@@ -1,22 +1,112 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Check, ChevronRight, ChevronLeft, User, MapPin, Share2, Car } from 'lucide-react';
+import { Check, ChevronRight, ChevronLeft, User, MapPin, Share2, Car, ChevronDown, GraduationCap, Mail, Instagram, Phone, Linkedin, MessageCircle } from 'lucide-react';
+
+const InputField = ({ label, ...props }: any) => (
+  <div className="group">
+    <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">{label}</label>
+    <input
+      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-uci-blue/20 focus:border-uci-blue focus:bg-white transition-all"
+      {...props}
+    />
+  </div>
+);
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+const SelectField = ({ label, value, onChange, options, placeholder = "Select..." }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  placeholder?: string;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  return (
+    <div className="group" ref={ref}>
+      <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">{label}</label>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-full h-[58px] p-4 pr-12 bg-slate-50 border rounded-xl font-medium outline-none transition-all text-left flex items-center ${
+            isOpen
+              ? 'border-uci-blue ring-2 ring-uci-blue/20 bg-white'
+              : 'border-slate-200 hover:border-slate-300'
+          }`}
+        >
+          <span className={selectedOption ? 'text-slate-900' : 'text-slate-400'}>
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+          <ChevronDown
+            size={20}
+            className={`absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+            {options.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full px-4 py-3 text-left font-medium transition-colors flex items-center justify-between ${
+                  value === option.value
+                    ? 'bg-uci-blue/10 text-uci-blue'
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {option.label}
+                {value === option.value && <Check size={18} className="text-uci-blue" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const Onboarding: React.FC = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAppContext();
   const [step, setStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
     gender: '',
     pronouns: '',
     city: '',
+    zipCode: '',
     major: '',
     year: '',
+    allowEmailContact: false,
+    phone: '',
     instagram: '',
+    linkedin: '',
     discord: '',
     role: '' as 'driver' | 'passenger' | 'both',
   });
@@ -58,25 +148,15 @@ export const Onboarding: React.FC = () => {
 
   const StepIndicator = () => (
     <div className="flex items-center justify-center space-x-2 mb-10">
-      {[1, 2, 3, 4].map((i) => (
+      {[1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
           className={`h-2 rounded-full transition-all duration-500 ${
-            i <= step ? 'w-10 bg-uci-blue' : 'w-2 bg-slate-200'
+            i <= step ? 'w-8 bg-uci-blue' : 'w-2 bg-slate-200'
           }`}
         />
       ))}
     </div>
-  );
-
-  const InputField = ({ label, ...props }: any) => (
-      <div className="group">
-          <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">{label}</label>
-          <input 
-            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-uci-blue/20 focus:border-uci-blue focus:bg-white transition-all"
-            {...props}
-          />
-      </div>
   );
 
   return (
@@ -99,31 +179,29 @@ export const Onboarding: React.FC = () => {
                 
                 <div className="space-y-5">
                 <InputField 
-                    label="Display Name" 
+                    label="Display Name* (Can be your nickname or real name!)" 
                     value={formData.name}
                     onChange={(e: any) => setFormData({...formData, name: e.target.value})}
                     placeholder="Peter Anteater"
                 />
                 
                 <div className="grid grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Gender</label>
-                        <select
-                        value={formData.gender}
-                        onChange={(e) => setFormData({...formData, gender: e.target.value})}
-                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-uci-blue/20 focus:border-uci-blue focus:bg-white transition-all appearance-none"
-                        >
-                            <option value="">Prefer not to say</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Non-binary">Non-binary</option>
-                        </select>
-                    </div>
-                    <InputField 
+                    <SelectField
+                      label="Gender"
+                      value={formData.gender}
+                      onChange={(val) => setFormData({...formData, gender: val})}
+                      placeholder=""
+                      options={[
+                        { value: 'Male', label: 'Male' },
+                        { value: 'Female', label: 'Female' },
+                        { value: 'Non-binary', label: 'Non-binary' },
+                      ]}
+                    />
+                    <InputField
                         label="Pronouns"
                         value={formData.pronouns}
                         onChange={(e: any) => setFormData({...formData, pronouns: e.target.value})}
-                        placeholder="she/her"
+                        placeholder=""
                     />
                 </div>
                 </div>
@@ -141,40 +219,58 @@ export const Onboarding: React.FC = () => {
                 </div>
 
                 <div className="space-y-5">
-                <InputField 
+                <InputField
                     label="City / Area"
                     value={formData.city}
                     onChange={(e: any) => setFormData({...formData, city: e.target.value})}
                     placeholder="e.g. Irvine Spectrum"
                 />
-                
-                <div className="grid grid-cols-2 gap-5">
-                    <InputField 
-                        label="Major"
-                        value={formData.major}
-                        onChange={(e: any) => setFormData({...formData, major: e.target.value})}
-                    />
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Year</label>
-                        <select
-                        value={formData.year}
-                        onChange={(e) => setFormData({...formData, year: e.target.value})}
-                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-uci-blue/20 focus:border-uci-blue focus:bg-white transition-all appearance-none"
-                        >
-                            <option value="">Select...</option>
-                            <option value="Freshman">Freshman</option>
-                            <option value="Sophomore">Sophomore</option>
-                            <option value="Junior">Junior</option>
-                            <option value="Senior">Senior</option>
-                            <option value="Grad">Grad Student</option>
-                        </select>
-                    </div>
-                </div>
+                <InputField
+                    label="Zip Code"
+                    value={formData.zipCode}
+                    onChange={(e: any) => setFormData({...formData, zipCode: e.target.value})}
+                    placeholder="e.g. 92612"
+                />
                 </div>
             </div>
             )}
 
             {step === 3 && (
+            <div className="space-y-8">
+                <div className="text-center">
+                <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-uci-blue shadow-inner rotate-3">
+                    <GraduationCap size={40} />
+                </div>
+                <h2 className="font-display text-3xl font-bold text-slate-900">Your Studies</h2>
+                <p className="text-slate-500 text-lg mt-2">What are you studying at UCI?</p>
+                </div>
+
+                <div className="space-y-5">
+                <InputField
+                    label="Major"
+                    value={formData.major}
+                    onChange={(e: any) => setFormData({...formData, major: e.target.value})}
+                    placeholder="e.g. Computer Science"
+                />
+                <SelectField
+                  label="Year"
+                  value={formData.year}
+                  onChange={(val) => setFormData({...formData, year: val})}
+                  placeholder="Select..."
+                  options={[
+                    { value: 'Freshman', label: 'Freshman' },
+                    { value: 'Sophomore', label: 'Sophomore' },
+                    { value: 'Junior', label: 'Junior' },
+                    { value: 'Senior', label: 'Senior' },
+                    { value: 'Grad', label: 'Grad Student' },
+                    { value: 'PhD Student', label: 'PhD Student' },
+                  ]}
+                />
+                </div>
+            </div>
+            )}
+
+            {step === 4 && (
             <div className="space-y-8">
                 <div className="text-center">
                 <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-uci-blue shadow-inner rotate-6">
@@ -185,28 +281,104 @@ export const Onboarding: React.FC = () => {
                 </div>
 
                 <div className="space-y-5">
+                {/* Email (disabled) */}
                 <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Instagram</label>
+                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-1.5 ml-1">
+                        <Mail size={16} className="text-uci-blue" /> Email
+                    </label>
+                    <input
+                        type="email"
+                        disabled
+                        value={user?.email || ''}
+                        className="w-full p-4 bg-slate-100 border border-slate-200 rounded-xl font-medium text-slate-500 cursor-not-allowed"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setFormData({...formData, allowEmailContact: !formData.allowEmailContact})}
+                        className="flex items-center gap-2.5 mt-3 cursor-pointer group text-left"
+                    >
+                        <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                formData.allowEmailContact
+                                    ? 'bg-uci-blue border-uci-blue scale-110'
+                                    : 'border-slate-300 group-hover:border-uci-blue group-hover:scale-105'
+                            }`}
+                        >
+                            {formData.allowEmailContact && <Check size={12} className="text-white" />}
+                        </div>
+                        <span className={`text-sm transition-colors duration-200 ${
+                            formData.allowEmailContact
+                                ? 'text-uci-blue font-medium'
+                                : 'text-slate-600 group-hover:text-slate-800'
+                        }`}>
+                            Want to be reached out by others through email?
+                        </span>
+                    </button>
+                </div>
+
+                {/* Phone */}
+                <div>
+                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-1.5 ml-1">
+                        <Phone size={16} className="text-uci-blue" /> Phone Number
+                    </label>
+                    <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        placeholder="(123) 456-7890"
+                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-uci-blue/20 focus:border-uci-blue focus:bg-white transition-all"
+                    />
+                </div>
+
+                {/* Instagram */}
+                <div>
+                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-1.5 ml-1">
+                        <Instagram size={16} className="text-uci-blue" /> Instagram
+                    </label>
                     <div className="relative">
                         <span className="absolute left-4 top-4 text-slate-400 font-medium">@</span>
                         <input
-                        type="text"
-                        value={formData.instagram}
-                        onChange={(e) => setFormData({...formData, instagram: e.target.value})}
-                        className="w-full p-4 pl-9 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-uci-blue/20 focus:border-uci-blue focus:bg-white transition-all"
+                            type="text"
+                            value={formData.instagram}
+                            onChange={(e) => setFormData({...formData, instagram: e.target.value})}
+                            className="w-full p-4 pl-9 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-uci-blue/20 focus:border-uci-blue focus:bg-white transition-all"
                         />
                     </div>
                 </div>
-                <InputField 
-                    label="Discord Username"
-                    value={formData.discord}
-                    onChange={(e: any) => setFormData({...formData, discord: e.target.value})}
-                />
+
+                {/* LinkedIn */}
+                <div>
+                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-1.5 ml-1">
+                        <Linkedin size={16} className="text-uci-blue" /> LinkedIn
+                    </label>
+                    <div className="relative">
+                        <span className="absolute left-4 top-4 text-slate-400 font-medium text-sm">linkedin.com/in/</span>
+                        <input
+                            type="text"
+                            value={formData.linkedin}
+                            onChange={(e) => setFormData({...formData, linkedin: e.target.value})}
+                            className="w-full p-4 pl-32 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-uci-blue/20 focus:border-uci-blue focus:bg-white transition-all"
+                        />
+                    </div>
+                </div>
+
+                {/* Discord */}
+                <div>
+                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-1.5 ml-1">
+                        <MessageCircle size={16} className="text-uci-blue" /> Discord Username
+                    </label>
+                    <input
+                        type="text"
+                        value={formData.discord}
+                        onChange={(e) => setFormData({...formData, discord: e.target.value})}
+                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-uci-blue/20 focus:border-uci-blue focus:bg-white transition-all"
+                    />
+                </div>
                 </div>
             </div>
             )}
 
-            {step === 4 && (
+            {step === 5 && (
             <div className="space-y-8">
                 <div className="text-center">
                 <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-uci-blue shadow-inner">
@@ -261,7 +433,7 @@ export const Onboarding: React.FC = () => {
           </button>
           <button
             onClick={handleNext}
-            disabled={step === 4 && !formData.role} 
+            disabled={step === 5 && !formData.role} 
             className="bg-uci-blue text-white px-8 py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none hover:translate-x-1"
           >
             {step === totalSteps ? 'Finish Profile' : 'Next Step'}

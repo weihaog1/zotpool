@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Mail, AlertCircle, Loader2, Car } from 'lucide-react';
 
-export const Login: React.FC = () => {
+export const SignUp: React.FC = () => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,15 +33,15 @@ export const Login: React.FC = () => {
     <div className="min-h-[90vh] flex items-center justify-center px-4 pt-20 relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 mesh-bg opacity-20"></div>
-      
+
       <div className="w-full max-w-md relative z-10 animate-fade-in-up">
         <div className="glass-panel p-8 md:p-10 rounded-3xl shadow-2xl">
             <div className="text-center mb-8">
             <div className="w-16 h-16 bg-uci-blue text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/30">
                 <Car size={32} />
             </div>
-            <h2 className="font-display text-3xl font-bold text-slate-900">Welcome Back</h2>
-            <p className="text-slate-500 mt-2">Enter your credentials to access ZotPool</p>
+            <h2 className="font-display text-3xl font-bold text-slate-900">Join ZotPool</h2>
+            <p className="text-slate-500 mt-2">Create an account to start carpooling</p>
             </div>
 
             {/* Fake Google Button */}
@@ -64,7 +64,7 @@ export const Login: React.FC = () => {
                 fill="#EA4335"
                 />
             </svg>
-            Continue with Google
+            Sign up with Google
             </button>
 
             <div className="relative mb-6">
@@ -108,12 +108,12 @@ export const Login: React.FC = () => {
                 disabled={isSubmitting}
                 className="w-full bg-uci-blue text-white py-3.5 px-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center transform active:scale-95"
             >
-                {isSubmitting ? <Loader2 className="animate-spin" /> : "Send Magic Link"}
+                {isSubmitting ? <Loader2 className="animate-spin" /> : "Create Account"}
             </button>
             <p className="mt-4 text-center text-sm text-slate-600">
-                Don't have an account?{' '}
-                <Link to="/signup" className="text-uci-blue font-bold hover:underline">
-                    Sign up
+                Already have an account?{' '}
+                <Link to="/login" className="text-uci-blue font-bold hover:underline">
+                    Log in
                 </Link>
             </p>
             </form>

@@ -4,6 +4,7 @@ import { AppProvider, useAppContext } from './context/AppContext';
 import { Layout } from './components/Layout';
 import { Landing } from './pages/Landing';
 import { Login } from './pages/Login';
+import { SignUp } from './pages/SignUp';
 import { Onboarding } from './pages/Onboarding';
 import { Dashboard } from './pages/Dashboard';
 import { CreatePost } from './pages/CreatePost';
@@ -38,6 +39,7 @@ const AppContent: React.FC = () => {
             <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<SignUp />} />
                 <Route 
                     path="/onboarding" 
                     element={
